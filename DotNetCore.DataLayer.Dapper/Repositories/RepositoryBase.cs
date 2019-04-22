@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using DotNetCore.DataLayer.Dapper.Handlers;
+using DotNetCore.DataLayer.Extensions;
 using System;
 using System.Data;
 using System.Threading.Tasks;
@@ -9,8 +10,6 @@ namespace DotNetCore.DataLayer.Dapper.Repositories
 {
     public abstract class RepositoryBase<TEntity> : IRepository<TEntity> where TEntity : class, IEntity, IDisposable, new()
     {
-        public abstract string TableName { get; }
-
         protected readonly IDbFactory dbFactory;
 
         protected readonly IDbTransaction dbTransaction;
@@ -18,6 +17,8 @@ namespace DotNetCore.DataLayer.Dapper.Repositories
         public IDbFactory Db => dbFactory;
 
         public IDbTransaction DbTransaction => dbTransaction;
+
+        public abstract string TableName { get; }
 
         public RepositoryBase(IDbFactory dbFactory, IDbTransaction dbTransaction)
         {
@@ -34,30 +35,48 @@ namespace DotNetCore.DataLayer.Dapper.Repositories
             dbFactory.Dispose();
         }
 
-        public abstract Task<TEntity> InsertAsync(TEntity record);
-
-        public abstract Task<int> UpdateAsync(TEntity record);
-
-        public virtual async Task<TEntity> GetByIdAsync(Guid id)
+        public async virtual Task<TEntity> InsertAsync(TEntity record)
         {
-            var sql = $"SELECT * FROM {TableName} WHERE id = @p_id";
+            record.CreatedOn = DateTime.UtcNow;
 
-            var record = await QueryFirstOrDefaultAsync(sql, new { p_id = id });
+            var (sql, param) = record.ToInsertData();
+
+            await ExecuteAsync(sql, param);
 
             return record;
         }
 
-        public async Task<int> DeleteAsync(TEntity record)
+        public async virtual Task<int> UpdateAsync(TEntity record)
+        {
+            record.LastUpdatedOn = DateTime.UtcNow;
+
+            var (sql, param) = record.ToUpdateData();
+
+            int affected = await ExecuteAsync(sql, param);
+
+            return affected;
+        }
+
+        public virtual async Task<TEntity> GetByIdAsync(Guid id)
+        {
+            var sql = $"SELECT * FROM {TableName} WHERE id = @id";
+
+            var record = await QueryFirstOrDefaultAsync(sql, new { id });
+
+            return record;
+        }
+
+        public virtual async Task<int> DeleteAsync(TEntity record)
         {
             if (record == null) { return 0; }
 
             return await DeleteAsync(record.Id);
         }
 
-        public async Task<int> DeleteAsync(Guid id)
+        public virtual async Task<int> DeleteAsync(Guid id)
         {
-            var sql = $"DELETE FROM {TableName} WHERE id = @p_id;";
-            var param = new { p_id = id };
+            var sql = $"DELETE FROM {TableName} WHERE id = @id;";
+            var param = new { id };
 
             return await Db.Context().ExecuteAsync(sql, param, DbTransaction);
         }

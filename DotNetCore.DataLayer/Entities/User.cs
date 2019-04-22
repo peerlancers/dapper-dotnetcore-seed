@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DotNetCore.DataLayer.Attributes;
+using System;
 
 namespace DotNetCore.DataLayer.Entities
 {
@@ -9,6 +10,7 @@ namespace DotNetCore.DataLayer.Entities
         Deactivated
     }
 
+    [DbTableName("users")]
     public class User : Entity
     {
         public string Username { get; set; }
@@ -23,6 +25,7 @@ namespace DotNetCore.DataLayer.Entities
 
         public UserStatus Status { get; set; }
 
+        [DbIgnore]
         public Company CompanyInfo { get; set; }
     }
 }
