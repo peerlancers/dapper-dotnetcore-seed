@@ -20,6 +20,6 @@ This is a starter solution for creating a repository project using [Dapper](http
 
  
 ## Database Migration
-This project uses the schema from [dbup-netcore-seed](https://github.com/peerlancers/dbup-netcore-seed) for it's demo repositories. Run the migration process before getting started if you don't want to create the database and tables manually.
+This project uses the schema from [dbup-dotnetcore-seed](https://github.com/peerlancers/dbup-dotnetcore-seed) for it's demo repositories. Run the migration process before getting started if you don't want to create the database and tables manually.
 
 ## To follow
