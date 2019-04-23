@@ -1,5 +1,4 @@
-﻿using DotNetCore.DataLayer.Dapper;
-using DotNetCore.DataLayer.Entities;
+﻿using DotNetCore.DataLayer.DapperTests.TestOrdering;
 using FluentAssertions;
 using System;
 using System.Threading.Tasks;
@@ -7,69 +6,73 @@ using Xunit;
 
 namespace DotNetCore.DataLayer.DapperTests.Repositories
 {
-    public class CompanyRepositoryTest
+    [TestCaseOrderer("DotNetCore.DataLayer.DapperTests.TestOrdering.PriorityOrderer", "DotNetCore.DataLayer.DapperTests")]
+    public class CompanyRepositoryTest : RepositoryTestBase
     {
-        private readonly IDbFactory dbFactory = new NpgsqlDbFactory();
-        private readonly IUnitOfWork work;
+        private static readonly MockData mock = new MockData();
 
-        public CompanyRepositoryTest()
+        [Fact, TestPriority(0)]
+        public async Task Insert_ShouldWorkSuccessfully()
         {
-            work = new UnitOfWork(dbFactory);
+            // Arrange
+            var affected = await Work.Companies.InsertAsync(mock.Company);
+
+            // Act
+            Work.Save();
+
+            // Assert
+            affected.Should().Be(1, "entity should be added successfully");
         }
 
-        [Fact]
-        public async Task CompanyRepository_ShouldWork()
+        [Fact, TestPriority(1)]
+        public async Task Update_ShouldWorkSuccessfully()
         {
-            Company companyEntity = new Company
-            {
-                Name = "The Company",
-                Description = "The Company Description",
-            };
-            var company = await InsertCompany(companyEntity);
-            company = await UpdateCompany(company);
-            company = await RetrieveCompany(company.Id);
-            await DeleteCompany(company);
+            // Arrange
+            mock.Company.Name = Guid.NewGuid().ToString();
+            mock.Company.Description = Guid.NewGuid().ToString();
+            var affected = await Work.Companies.UpdateAsync(mock.Company);
+            var record = await Work.Companies.GetByIdAsync(mock.Company.Id);
+
+            // Act
+            Work.Save();
+
+            // Assert
+            affected.Should().Be(1, "entity should be updated successfully");
+            record.Should().NotBeNull("entity should be existing");
+            record.Name.Should().Be(mock.Company.Name, "entity should have the updated Name");
+            record.Description.Should().Be(mock.Company.Description, "entity should have the updated Description");
+            record.LastUpdatedOn.Should().NotBeNull("entity should have the updated LastUpdatedOn");
         }
 
-        private async Task<Company> InsertCompany(Company entity)
+        [Fact, TestPriority(2)]
+        public async Task GetById_ShouldWorkSuccessfully()
         {
-            var result = await work.Companies.InsertAsync(entity);
-            work.Save();
+            // Arrange
+            var record = await Work.Companies.GetByIdAsync(mock.Company.Id);
 
-            return entity;
+            // Act
+            Work.Save();
+
+            // Assert
+            record.Should().NotBeNull("entity should be existing");
+            record.Id.Should().Be(mock.Company.Id);
+            record.Name.Should().Be(mock.Company.Name, "entity should have the correct Name mapped");
+            record.Description.Should().Be(mock.Company.Description, "entity should have the correct Description mapped");
         }
 
-        private async Task<Company> UpdateCompany(Company entity)
+        [Fact, TestPriority(3)]
+        public async Task Delete_ShouldWorkSuccessfully()
         {
-            entity.Name = "XXX";
-            entity.Description = "Description XXX";
-            var affected = await work.Companies.UpdateAsync(entity);
-            work.Save();
+            // Arrange
+            var affectedCompanies = await Work.Companies.DeleteAsync(mock.Company);
+            var record = await Work.Companies.GetByIdAsync(mock.Company.Id);
 
-            affected.Should().Be(1);
+            // Act
+            Work.Save();
 
-            return entity;
-        }
-
-        private async Task<Company> RetrieveCompany(Guid id)
-        {
-            var result = await work.Companies.GetByIdAsync(id);
-            work.Save();
-
-            result.Should().NotBeNull();
-            result.Id.Should().Equals(id);
-            result.Name.Should().Equals("XXX");
-            result.Description.Should().Equals("Description XXX");
-
-            return result;
-        }
-
-        private async Task DeleteCompany(Company entity)
-        {
-            var affectedCompanies = await work.Companies.DeleteAsync(entity);
-            work.Save();
-
-            affectedCompanies.Should().Be(1);
+            // Assert
+            affectedCompanies.Should().Be(1, "entity should be deleted successfully");
+            record.Should().BeNull("entity should no longer be existing");
         }
     }
 }

@@ -1,32 +1,31 @@
 ﻿using DotNetCore.DataLayer.Entities;
 using DotNetCore.DataLayer.Interfaces;
 using System;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace DotNetCore.DataLayer.Dapper.Repositories
 {
-    public class UserRepository : RepositoryBase<User>, IUserRepository
+    public class UserRepository : DapperRepositoryBase<User>, IUserRepository
     {
-        public override string TableName => "users";
+        public override string TableName => TableNames.Users;
 
-        public UserRepository(IDbFactory dbFactory, IDbTransaction dbTransaction) : base(dbFactory, dbTransaction)
+        public UserRepository(IDapperDbClient dbClient) : base(dbClient)
         {
         }
 
         public async override Task<User> GetByIdAsync(Guid id)
         {
-            var sql = $"SELECT * FROM {TableName} WHERE id = @p_id";
-            var record = await QueryFirstOrDefaultAsync(sql, new { p_id = id });
+            var sql = $"SELECT * FROM {TableName} WHERE id = @id";
+            var record = await DbClient.QueryFirstOrDefaultAsync<User>(sql, new { id });
             if (record == null) { return record; }
 
-            var multipleSql = $@"SELECT * FROM companies WHERE id = @p_company_id;";
-            var multipleResults = await QueryMultipleAsync(
-                multipleSql,
+            var multipleQuery = SharedQueries.Companies.GetCompanyById("company_id");
+            var multipleResults = await DbClient.QueryMultipleAsync(
+                multipleQuery,
                 new
                 {
-                    p_company_id = record.CompanyId
+                    company_id = record.CompanyId
                 });
 
             record.CompanyInfo = (await multipleResults.ReadAsync<Company>()).SingleOrDefault();

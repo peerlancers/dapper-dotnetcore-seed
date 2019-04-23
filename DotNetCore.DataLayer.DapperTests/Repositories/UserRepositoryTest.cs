@@ -1,4 +1,4 @@
-﻿using DotNetCore.DataLayer.Dapper;
+﻿using DotNetCore.DataLayer.DapperTests.TestOrdering;
 using DotNetCore.DataLayer.Entities;
 using FluentAssertions;
 using System;
@@ -7,88 +7,89 @@ using Xunit;
 
 namespace DotNetCore.DataLayer.DapperTests.Repositories
 {
-    public class UserRepositoryTest
+    [TestCaseOrderer("DotNetCore.DataLayer.DapperTests.TestOrdering.PriorityOrderer", "DotNetCore.DataLayer.DapperTests")]
+    public class UserRepositoryTest : RepositoryTestBase
     {
-        private readonly IDbFactory dbFactory = new NpgsqlDbFactory();
-        private readonly IUnitOfWork work;
+        private static readonly MockData mock = new MockData();
 
-        private Company companyEntity = new Company
+        [Fact, TestPriority(0)]
+        public async Task Insert_ShouldWorkSuccessfully()
         {
-            Name = "The Company",
-            Description = "The Company Description",
-        };
-        
+            // Arrange
+            await Work.Companies.InsertAsync(mock.Company);
+            mock.User.CompanyId = mock.Company.Id;
+            mock.User.CompanyInfo = mock.Company;
+            var affected = await Work.Users.InsertAsync(mock.User);
 
-        public UserRepositoryTest()
-        {
-            work = new UnitOfWork(dbFactory);
+            // Act
+            Work.Save();
+
+            // Assert
+            affected.Should().Be(1, "entity should be added successfully");
         }
 
-        [Fact]
-        public async Task UserRepository_ShouldWork()
+        [Fact, TestPriority(1)]
+        public async Task Update_ShouldWorkSuccessfully()
         {
-            User userEntity = new User
-            {
-                Username = "jdoe",
-                FirstName = "John",
-                LastName = "Doe",
-                Email = "jd@mail.com",
-                Status = UserStatus.Pending
-            };
-            var user = await InsertUser(userEntity);
-            user = await UpdateUser(user);
-            user = await RetrieveUser(user.Id);
-            await DeleteUser(user);
+            // Arrange
+            mock.User.FirstName = Guid.NewGuid().ToString();
+            mock.User.LastName = Guid.NewGuid().ToString();
+            mock.User.Username = Guid.NewGuid().ToString();
+            mock.User.Email = Guid.NewGuid().ToString();
+            mock.User.Status = UserStatus.Active;
+            var affected = await Work.Users.UpdateAsync(mock.User);
+            var record = await Work.Users.GetByIdAsync(mock.User.Id);
+
+            // Act
+            Work.Save();
+
+            // Assert
+            affected.Should().Be(1, "entity should be updated successfully");
+            record.Should().NotBeNull("entity should be existing");
+            record.FirstName.Should().Be(mock.User.FirstName, "entity should have the updated FirstName");
+            record.LastName.Should().Be(mock.User.LastName, "entity should have the updated LastName");
+            record.Username.Should().Be(mock.User.Username, "entity should have the updated Username");
+            record.Email.Should().Be(mock.User.Email, "entity should have the updated Email");
+            record.Status.Should().Be(mock.User.Status, "entity should have the updated Status");
+            record.LastUpdatedOn.Should().NotBeNull("entity should have the updated LastUpdatedOn");
         }
 
-        private async Task<User> InsertUser(User userEntity)
+        [Fact, TestPriority(2)]
+        public async Task GetById_ShouldWorkSuccessfully()
         {
-            var companyResult = await work.Companies.InsertAsync(companyEntity);
-            userEntity.CompanyId = companyResult.Id;
-            var result = await work.Users.InsertAsync(userEntity);
-            work.Save();
+            // Arrange
+            var record = await Work.Users.GetByIdAsync(mock.User.Id);
 
-            return userEntity;
+            // Act
+            Work.Save();
+
+            // Assert
+            record.Should().NotBeNull("entity should be existing");
+            record.Id.Should().Be(mock.User.Id);
+            record.FirstName.Should().Be(mock.User.FirstName, "entity should have the correct FirstName mapped");
+            record.LastName.Should().Be(mock.User.LastName, "entity should have the correct LastName mapped");
+            record.Username.Should().Be(mock.User.Username, "entity should have the correct Username mapped");
+            record.Email.Should().Be(mock.User.Email, "entity should have the correct Email mapped");
+            record.Status.Should().Be(mock.User.Status, "entity should have the correct Status mapped");
+            record.CompanyId.Should().Be(mock.User.CompanyId, "entity should have the correct CompanyId mapped");
+            record.CompanyInfo.Id.Should().Be(mock.Company.Id, "entity should have the correct CompanyInfo.Id mapped");
+            record.CompanyInfo.Name.Should().Be(mock.Company.Name, "entity should have the correct CompanyInfo.Name mapped");
+            record.CompanyInfo.Description.Should().Be(mock.Company.Description, "entity should have the correct CompanyInfo.Description mapped");
         }
 
-        private async Task<User> UpdateUser(User userEntity)
+        [Fact, TestPriority(3)]
+        public async Task Delete_ShouldWorkSuccessfully()
         {
-            userEntity.FirstName = "XXX";
-            var affected = await work.Users.UpdateAsync(userEntity);
-            work.Save();
+            // Arrange
+            var affectedCompanies = await Work.Users.DeleteAsync(mock.User);
+            var record = await Work.Users.GetByIdAsync(mock.User.Id);
 
-            affected.Should().Be(1);
+            // Act
+            Work.Save();
 
-            return userEntity;
-        }
-
-        private async Task<User> RetrieveUser(Guid id)
-        {
-            var result = await work.Users.GetByIdAsync(id);
-            work.Save();
-
-            result.Should().NotBeNull();
-            result.Id.Should().Equals(id);
-            result.FirstName.Should().Equals("XXX");
-            result.LastName.Should().Equals("Doe");
-            result.Username.Should().Equals("jdoe");
-            result.CompanyInfo.Id.Should().Equals(companyEntity.Id);
-            result.CompanyInfo.Name.Should().Equals(companyEntity.Name);
-            result.CompanyInfo.Description.Should().Equals(companyEntity.Description);
-
-            return result;
-        }
-
-        private async Task DeleteUser(User userEntity)
-        {
-
-            var affectedUsers = await work.Users.DeleteAsync(userEntity);
-            var affectedCompanies = await work.Companies.DeleteAsync(userEntity.CompanyInfo);
-            work.Save();
-
-            affectedUsers.Should().Be(1);
-            affectedCompanies.Should().Be(1);
-
+            // Assert
+            affectedCompanies.Should().Be(1, "entity should be deleted successfully");
+            record.Should().BeNull("entity should no longer be existing");
         }
     }
 }

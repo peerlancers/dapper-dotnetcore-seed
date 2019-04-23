@@ -1,14 +1,13 @@
 ﻿using DotNetCore.DataLayer.Entities;
 using DotNetCore.DataLayer.Interfaces;
-using System.Data;
 
 namespace DotNetCore.DataLayer.Dapper.Repositories
 {
-    public class CompanyRepository : RepositoryBase<Company>, ICompanyRepository
+    public class CompanyRepository : DapperRepositoryBase<Company>, ICompanyRepository
     {
-        public override string TableName => "companies";
+        public override string TableName => TableNames.Companies;
 
-        public CompanyRepository(IDbFactory dbFactory, IDbTransaction dbTransaction) : base(dbFactory, dbTransaction)
+        public CompanyRepository(IDapperDbClient dbClient) : base(dbClient)
         {
         }
     }

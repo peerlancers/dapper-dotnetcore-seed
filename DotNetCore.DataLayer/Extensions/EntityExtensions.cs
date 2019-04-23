@@ -19,17 +19,16 @@ namespace DotNetCore.DataLayer.Extensions
 
             if (hasSpecifiedTableName)
             {
-                DbTableNameAttribute dnAttribute = entityType.GetCustomAttributes(typeof(DbTableNameAttribute), true).FirstOrDefault() as DbTableNameAttribute;
-                if (dnAttribute != null)
+                if (entityType.GetCustomAttributes(typeof(DbTableNameAttribute), true).FirstOrDefault() is DbTableNameAttribute attribute)
                 {
-                    tableName = dnAttribute.TableName;
+                    tableName = attribute.TableName;
                 }
             }
             
             return tableName;
         }
 
-        public static (string sql, object param) ToInsertData(this IEntity entity, CaseType caseType = CaseType.SnakeCase)
+        public static (string sql, object param) ToInsertData(this IEntity entity, bool useSnakeCase = false)
         {
             var fields = new StringBuilder();
             var param = new StringBuilder();
@@ -42,11 +41,12 @@ namespace DotNetCore.DataLayer.Extensions
             {
                 if (propertyInfo.IsValidSqlField())
                 {
-                    fields.Append($"{delimiter}{propertyInfo.Name.PascalCaseTo(caseType)}");
-                    param.Append($"{delimiter}@{propertyInfo.Name.PascalCaseTo(caseType)}");
+                    string fieldName = GetFieldName(propertyInfo, useSnakeCase);
+                    fields.Append($"{delimiter}{fieldName}");
+                    param.Append($"{delimiter}@{fieldName}");
                     delimiter = ", ";
 
-                    paramObject.Add(propertyInfo.Name.PascalCaseTo(caseType), propertyInfo.GetValue(entity));
+                    paramObject.Add(fieldName, propertyInfo.GetValue(entity));
                 }
             }
 
@@ -55,7 +55,7 @@ namespace DotNetCore.DataLayer.Extensions
             return (sql, paramObject);
         }
 
-        public static (string sql, object param) ToUpdateData(this IEntity entity, CaseType caseType = CaseType.SnakeCase)
+        public static (string sql, object param) ToUpdateData(this IEntity entity, bool useSnakeCase = false)
         {
             var fields = new StringBuilder();
             var paramObject = (IDictionary<string, object>)new ExpandoObject();
@@ -66,15 +66,33 @@ namespace DotNetCore.DataLayer.Extensions
             {
                 if (propertyInfo.IsValidSqlField())
                 {
-                    fields.Append($"{delimiter}{propertyInfo.Name.PascalCaseTo(caseType)} = @{propertyInfo.Name.PascalCaseTo(caseType)}");
+                    string fieldName = GetFieldName(propertyInfo, useSnakeCase);
+                    fields.Append($"{delimiter}{fieldName} = @{fieldName}");
                     delimiter = ", ";
-                    paramObject.Add(propertyInfo.Name.PascalCaseTo(caseType), propertyInfo.GetValue(entity));
+                    paramObject.Add(fieldName, propertyInfo.GetValue(entity));
                 }
             }
 
-            string sql = $"UPDATE {entity.GetTableName()} SET {fields.ToString()} WHERE id = @{"Id".PascalCaseTo(caseType)};";
+            string idParam = useSnakeCase ? nameof(entity.Id).ToSnakeCase() : nameof(entity.Id);
+            string sql = $"UPDATE {entity.GetTableName()} SET {fields.ToString()} WHERE id = @{idParam};";
 
             return (sql, paramObject);
+        }
+
+        private static string GetFieldName(PropertyInfo propertyInfo, bool useSnakeCase = false)
+        {
+            bool hasSpecifiedFieldName = Attribute.IsDefined(propertyInfo, typeof(DbFieldNameAttribute));
+
+            var fieldName = useSnakeCase ? propertyInfo.Name.ToSnakeCase() : propertyInfo.Name;
+            if (hasSpecifiedFieldName)
+            {
+                if (propertyInfo.GetCustomAttributes(typeof(DbFieldNameAttribute), true).FirstOrDefault() is DbFieldNameAttribute attribute)
+                {
+                    fieldName = attribute.FieldName;
+                }
+            }
+
+            return fieldName;
         }
     }
 }

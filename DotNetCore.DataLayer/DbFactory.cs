@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Data;
 
-namespace DotNetCore.DataLayer.Dapper
+namespace DotNetCore.DataLayer
 {
     public abstract class DbFactory : IDbFactory
     {
         private bool disposed = false;
         private readonly string connectionString;
         private IDbConnection _dbContext;
-
-        public DbFactory()
-        {
-        }
 
         public DbFactory(string connectionString)
         {

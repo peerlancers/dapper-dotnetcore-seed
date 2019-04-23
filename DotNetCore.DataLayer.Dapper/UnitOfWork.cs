@@ -9,23 +9,26 @@ namespace DotNetCore.DataLayer.Dapper
     {
         private bool disposed = false;
 
-        public IDbFactory Db { get; private set; }
+        public IDbFactory DbFactory { get; private set; }
+
+        public IDapperDbClient DbClient { get; private set; }
 
         public IDbTransaction DbTransaction { get; private set; }
 
-        private IUserRepository _userRepository;
-        public IUserRepository Users => _userRepository ?? (_userRepository = new UserRepository(Db, DbTransaction));
+        private IUserRepository userRepository;
+        public IUserRepository Users => userRepository ?? (userRepository = new UserRepository(DbClient));
 
-        private ICompanyRepository _companyRepository;
-        public ICompanyRepository Companies => _companyRepository ?? (_companyRepository = new CompanyRepository(Db, DbTransaction));
+        private ICompanyRepository companyRepository;
+        public ICompanyRepository Companies => companyRepository ?? (companyRepository = new CompanyRepository(DbClient));
 
         public UnitOfWork(IDbFactory dbFactory)
         {
-            Db = dbFactory;
-            if (Db.Context()?.State == ConnectionState.Closed) {
-                Db.Context().Open();
+            DbFactory = dbFactory;
+            if (DbFactory.Context()?.State == ConnectionState.Closed) {
+                DbFactory.Context().Open();
             }
-            DbTransaction = Db.Context().BeginTransaction();
+            DbTransaction = DbFactory.Context().BeginTransaction();
+            DbClient = new DapperDbClient(DbFactory, DbTransaction);
         }
 
         public void Save()
@@ -42,7 +45,7 @@ namespace DotNetCore.DataLayer.Dapper
             finally
             {
                 DbTransaction.Dispose();
-                DbTransaction = Db.Context().BeginTransaction();
+                DbTransaction = DbFactory.Context().BeginTransaction();
                 ResetRepositories();
             }
         }
@@ -65,10 +68,10 @@ namespace DotNetCore.DataLayer.Dapper
                     DbTransaction = null;
                 }
 
-                if (Db != null)
+                if (DbFactory != null)
                 {
-                    Db.Dispose();
-                    Db = null;
+                    DbFactory.Dispose();
+                    DbFactory = null;
                 }
 
                 disposed = true;
