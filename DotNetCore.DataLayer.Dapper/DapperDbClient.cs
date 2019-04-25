@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using static Dapper.SqlMapper;
 
@@ -21,6 +23,16 @@ namespace DotNetCore.DataLayer.Dapper
         {
             dbFactory.Dispose();
             dbTransaction.Dispose();
+        }
+
+        public async Task<List<TReturn>> QueryAsync<TFirst, TSecond, TReturn>(string sql, Func<TFirst, TSecond, TReturn> map, object param = null, string splitOn = "id")
+        {
+            return (await DbFactory.Context().QueryAsync(sql, map, param: param, transaction: DbTransaction, splitOn: splitOn)).ToList();
+        }
+
+        public async Task<List<TReturn>> QueryAsync<TReturn>(string sql, object param = null)
+        {
+            return (await DbFactory.Context().QueryAsync<TReturn>(sql, param, DbTransaction)).ToList();
         }
 
         public async Task<GridReader> QueryMultipleAsync(string sql, object param = null)

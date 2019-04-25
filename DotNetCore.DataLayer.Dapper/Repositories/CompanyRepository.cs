@@ -10,5 +10,10 @@ namespace DotNetCore.DataLayer.Dapper.Repositories
         public CompanyRepository(IDapperDbClient dbClient) : base(dbClient)
         {
         }
+
+        protected override string GetBaseQuery()
+        {
+            return $"SELECT * FROM {TableName}";
+        }
     }
 }

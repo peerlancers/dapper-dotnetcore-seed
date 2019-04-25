@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using DotNetCore.DataLayer.Dapper.Handlers;
 using System;
+using System.Threading.Tasks;
 using static Dapper.SqlMapper;
 
 namespace DotNetCore.DataLayer.Dapper.Repositories
@@ -16,5 +17,13 @@ namespace DotNetCore.DataLayer.Dapper.Repositories
 
             DbClient = dbClient ?? throw new ArgumentNullException(nameof(dbClient));
         }
+
+        public async Task<long> GetTotalCountAsync(string filter, object param, string alias = "")
+        {
+            var sqlCount = $"SELECT COUNT(1) FROM {TableName} {alias} {filter};";
+            return await DbClient.ExecuteScalarAsync<long>(sqlCount, param);
+        }
+
+        protected abstract string GetBaseQuery();
     }
 }

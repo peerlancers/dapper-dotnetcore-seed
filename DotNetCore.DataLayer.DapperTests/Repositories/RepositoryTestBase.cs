@@ -9,6 +9,7 @@ namespace DotNetCore.DataLayer.DapperTests.Repositories
 
         public RepositoryTestBase()
         {
+            AppSettingsLoader.TrySetupSettingsFile();
             var settings = new EnvironmentSettings();
             DbFactory = new NpgsqlDbFactory(settings);
             Work = new UnitOfWork(DbFactory);

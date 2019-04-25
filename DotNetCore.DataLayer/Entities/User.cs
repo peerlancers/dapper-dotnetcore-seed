@@ -10,6 +10,16 @@ namespace DotNetCore.DataLayer.Entities
         Deactivated
     }
 
+    public enum UserSortableFields
+    {
+        Username,
+        FirstName,
+        LastName,
+        Email,
+        CreatedOn,
+        LastUpdatedOn
+    }
+
     [DbTableName("users")]
     public class User : Entity
     {

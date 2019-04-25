@@ -5,17 +5,16 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using static DotNetCore.DataLayer.Extensions.StringExtensions;
 
 namespace DotNetCore.DataLayer.Extensions
 {
     public static class EntityExtensions
     {
-        public static string GetTableName(this IEntity entity, CaseType caseType = CaseType.SnakeCase)
+        public static string GetTableName(this IEntity entity, bool useSnakeCase = false)
         {
             Type entityType = entity.GetType();
             bool hasSpecifiedTableName = Attribute.IsDefined(entityType, typeof(DbTableNameAttribute));
-            var tableName = $"{entityType.Name.PascalCaseTo(caseType)}s";
+            var tableName = useSnakeCase ? $"{entityType.Name}s".ToSnakeCase() : $"{entityType.Name}s";
 
             if (hasSpecifiedTableName)
             {
@@ -50,7 +49,7 @@ namespace DotNetCore.DataLayer.Extensions
                 }
             }
 
-            string sql = $"INSERT INTO {entity.GetTableName()} ({fields.ToString()}) VALUES({param.ToString()});";
+            string sql = $"INSERT INTO {entity.GetTableName(useSnakeCase)} ({fields.ToString()}) VALUES({param.ToString()});";
 
             return (sql, paramObject);
         }
@@ -74,7 +73,7 @@ namespace DotNetCore.DataLayer.Extensions
             }
 
             string idParam = useSnakeCase ? nameof(entity.Id).ToSnakeCase() : nameof(entity.Id);
-            string sql = $"UPDATE {entity.GetTableName()} SET {fields.ToString()} WHERE id = @{idParam};";
+            string sql = $"UPDATE {entity.GetTableName(useSnakeCase)} SET {fields.ToString()} WHERE id = @{idParam};";
 
             return (sql, paramObject);
         }

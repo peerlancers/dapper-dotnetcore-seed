@@ -80,7 +80,8 @@ namespace DotNetCore.DataLayer.Dapper
 
         private void ResetRepositories()
         {
-
+            userRepository = null;
+            companyRepository = null;
         }
     }
 }
