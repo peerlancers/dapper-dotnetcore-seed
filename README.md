@@ -1,7 +1,5 @@
 # .Net Core Dapper - Repository Seed Project
 
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
-
 This is a starter solution for creating a repository project using [Dapper](https://github.com/StackExchange/Dapper) in .NET Core. You can use it to quickly create CRUD process by simply adding repositories.
 
 ## Getting Started

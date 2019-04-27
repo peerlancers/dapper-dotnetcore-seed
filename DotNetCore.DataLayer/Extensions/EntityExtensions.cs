@@ -40,7 +40,7 @@ namespace DotNetCore.DataLayer.Extensions
             {
                 if (propertyInfo.IsValidSqlField())
                 {
-                    string fieldName = GetFieldName(propertyInfo, useSnakeCase);
+                    string fieldName = propertyInfo.GetFieldName(useSnakeCase);
                     fields.Append($"{delimiter}{fieldName}");
                     param.Append($"{delimiter}@{fieldName}");
                     delimiter = ", ";
@@ -65,7 +65,7 @@ namespace DotNetCore.DataLayer.Extensions
             {
                 if (propertyInfo.IsValidSqlField())
                 {
-                    string fieldName = GetFieldName(propertyInfo, useSnakeCase);
+                    string fieldName = propertyInfo.GetFieldName(useSnakeCase);
                     fields.Append($"{delimiter}{fieldName} = @{fieldName}");
                     delimiter = ", ";
                     paramObject.Add(fieldName, propertyInfo.GetValue(entity));
@@ -76,22 +76,6 @@ namespace DotNetCore.DataLayer.Extensions
             string sql = $"UPDATE {entity.GetTableName(useSnakeCase)} SET {fields.ToString()} WHERE id = @{idParam};";
 
             return (sql, paramObject);
-        }
-
-        private static string GetFieldName(PropertyInfo propertyInfo, bool useSnakeCase = false)
-        {
-            bool hasSpecifiedFieldName = Attribute.IsDefined(propertyInfo, typeof(DbFieldNameAttribute));
-
-            var fieldName = useSnakeCase ? propertyInfo.Name.ToSnakeCase() : propertyInfo.Name;
-            if (hasSpecifiedFieldName)
-            {
-                if (propertyInfo.GetCustomAttributes(typeof(DbFieldNameAttribute), true).FirstOrDefault() is DbFieldNameAttribute attribute)
-                {
-                    fieldName = attribute.FieldName;
-                }
-            }
-
-            return fieldName;
         }
     }
 }

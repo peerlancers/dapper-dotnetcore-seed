@@ -7,19 +7,19 @@ namespace DotNetCore.DataLayer
     {
         private bool disposed = false;
         private readonly string connectionString;
-        private IDbConnection _dbContext;
+        private IDbConnection dbContext;
 
         public DbFactory(string connectionString)
         {
             this.connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
-            _dbContext = Connection(this.connectionString);
+            dbContext = Connection(this.connectionString);
         }
 
         public abstract IDbConnection Connection(string connectionString);
 
         public virtual IDbConnection Context()
         {
-            return _dbContext ?? (_dbContext = Connection(connectionString));
+            return dbContext ?? (dbContext = Connection(connectionString));
         }
 
         public virtual void Dispose()
@@ -34,8 +34,8 @@ namespace DotNetCore.DataLayer
 
             if (disposing)
             {
-                _dbContext?.Dispose();
-                _dbContext = null;
+                dbContext?.Dispose();
+                dbContext = null;
                 disposed = true;
             }
         }
